@@ -34,3 +34,9 @@ The platform integrates AI and Azure Cognitive Services to analyze user data and
    ```bash
    git clone https://github.com/ADKARSANJANA/careercoach.git
    cd careercoach
+
+---
+
+## Disclaimer
+
+Note: Some parts of this project were assisted by AI tools like ChatGPT.
