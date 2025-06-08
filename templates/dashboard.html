@@ -1,0 +1,658 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8" />
+    <title>Dashboard | CareerCoach</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}" />
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/courses.css') }}" />
+
+    <style>
+        .topics-list {
+            padding: 10px;
+            background: #f8f8f8;
+            border-radius: 5px;
+            line-height: 1.6;
+        }
+        .topics-list span {   
+            display: inline-block;
+            background: #e0f7fa;
+            margin: 4px;
+            padding: 6px 12px;
+            border-radius: 20px;
+            color: #00796b;
+            font-weight: 500;
+        }
+    </style>
+
+
+
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script>
+    // Show sections based on URL hash
+    function showSection(sectionId) {
+        const sections = document.querySelectorAll('.section');
+        sections.forEach(section => section.style.display = 'none');
+        document.getElementById(sectionId).style.display = 'block';
+        window.location.hash = sectionId;
+    }
+
+    // --------------------
+    // PAGE LOAD
+    // --------------------
+    window.onload = function () {
+        const defaultSection = window.location.hash ? window.location.hash.substring(1) : 'overview';
+        showSection(defaultSection);
+
+        renderCurriculumAnalysis();  // handles curriculum + also sets skills
+        renderCourses();
+        renderJobInsights();
+        renderRoadmap();
+        loadSkillGap();              // initially loads skills (fallback if curriculum not used)
+    };
+
+    // --------------------
+    // CURRICULUM ANALYSIS
+    // --------------------
+    function renderCurriculumAnalysis() {
+        const form = document.getElementById("curriculumForm");
+        if (!form) return;
+
+        // Prevent duplicate listeners
+        form.removeEventListener("submit", handleCurriculumSubmit);
+        form.addEventListener("submit", handleCurriculumSubmit);
+    }
+
+    function handleCurriculumSubmit(e) {
+        e.preventDefault();
+
+        const fileInput = document.getElementById("fileInput");
+        const manualInput = document.getElementById("manualInput");
+        const formData = new FormData();
+
+        if (fileInput.files.length > 0) {
+            formData.append("file", fileInput.files[0]);
+        } else if (manualInput.value.trim() !== "") {
+            formData.append("manual_input", manualInput.value.trim());
+        } else {
+            alert("Please upload a file or enter text manually.");
+            return;
+        }
+
+        fetch("/analyze_curriculum", {
+            method: "POST",
+            body: formData
+        })
+        .then(response => response.json())
+        .then(data => {
+            const covered = data.covered_topics || [];
+            const notCovered = data.not_covered_topics || [];
+
+            // 🌟 Save covered topics as current skills globally
+            window.currentSkills = covered;
+
+            // Update UI
+            document.getElementById("coveredTopics").innerHTML = covered.length 
+                ? covered.map(t => `<span>${t}</span>`).join("")
+                : "None";
+
+            document.getElementById("notCoveredTopics").innerHTML = notCovered.length
+                ? notCovered.map(t => `<span>${t}</span>`).join("")
+                : "None";
+
+            // Rerender skill gap UI with new skills
+            renderSkillGap();
+        })
+        .catch(error => {
+            console.error("❌ Fetch failed:", error);
+            alert("Failed to analyze curriculum.");
+        });
+    }
+
+    // --------------------
+    // SKILL GAP
+    // --------------------
+    function loadSkillGap() {
+        fetch('/api/user/current-skills')
+            .then(res => res.json())
+            .then(data => {
+                // Only load if no curriculum analysis has set skills yet
+                if (!window.currentSkills || window.currentSkills.length === 0) {
+                    window.currentSkills = data.skills || [];
+                    renderSkillGap();
+                }
+            })
+            .catch(err => {
+                console.error('Error fetching current skills:', err);
+                window.currentSkills = [];
+                renderSkillGap();
+            });
+    }
+
+    function renderSkillGap() {
+        const skillGapDetails = document.getElementById('skillgap-details');
+        skillGapDetails.innerHTML = '';
+
+        const roleSelect = document.createElement('select');
+        roleSelect.id = 'skillgapRoleSelect';
+        roleSelect.innerHTML = `
+            <option value="">--Select Role--</option>
+            <option value="frontend developer">Frontend Developer</option>
+            <option value="backend developer">Backend Developer</option>
+            <option value="data analyst">Data Analyst</option>
+            <option value="machine learning engineer">Machine Learning Engineer</option>
+            <option value="full stack developer">Full Stack Developer</option>
+            <option value="cloud engineer">Cloud Engineer</option>
+            <option value="cybersecurity analyst">Cybersecurity Analyst</option>
+        `;
+
+        skillGapDetails.appendChild(roleSelect);
+
+        const gapResultDiv = document.createElement('div');
+        gapResultDiv.id = 'gapResults';
+        gapResultDiv.style.marginTop = '20px';
+        skillGapDetails.appendChild(gapResultDiv);
+
+        roleSelect.addEventListener('change', () => {
+            const selectedRole = roleSelect.value;
+            gapResultDiv.innerHTML = '';
+
+            if (!selectedRole) return;
+
+            fetch('/skill_gap', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    skills: window.currentSkills || [],
+                    role: selectedRole
+                })
+            })
+            .then(res => res.json())
+            .then(data => {
+                if (data.missing_skills && data.missing_skills.length === 0) {
+                    gapResultDiv.innerHTML = `<p>✅ You have all the required skills for <strong>${selectedRole}</strong>.</p>`;
+                } else if (data.missing_skills) {
+                    const ul = document.createElement('ul');
+                    data.missing_skills.forEach(skill => {
+                        const li = document.createElement('li');
+                        li.textContent = skill;
+                        ul.appendChild(li);
+                    });
+                    gapResultDiv.innerHTML = `<h3>Missing Skills for <strong>${selectedRole}</strong>:</h3>`;
+                    gapResultDiv.appendChild(ul);
+                } else if (data.error) {
+                    gapResultDiv.innerHTML = `<p style="color:red;">Error: ${data.error}</p>`;
+                }
+            })
+            .catch(err => {
+                gapResultDiv.innerHTML = `<p style="color:red;">Error fetching skill gap data.</p>`;
+                console.error(err);
+            });
+        });
+    }
+
+        // Courses Section Logic
+        function renderCourses() {
+            const courseContainer = document.getElementById('courses-list');
+            const courses = [
+                {
+                    title: 'Python for Everybody',
+                    description: 'Learn Python basics and advance to data structures and web access.',
+                    platform: 'Coursera',
+                    link: 'https://www.coursera.org/specializations/python',
+                    level: 'Beginner'
+                },
+                {
+                    title: 'Deep Learning Specialization',
+                    description: 'Master deep learning, neural networks, and advanced AI models.',
+                    platform: 'Coursera',
+                    link: 'https://www.coursera.org/specializations/deep-learning',
+                    level: 'Advanced'
+                },
+                {
+                    title: 'Responsive Web Design',
+                    description: 'Build responsive websites using HTML, CSS, and modern design techniques.',
+                    platform: 'freeCodeCamp',
+                    link: 'https://www.freecodecamp.org/learn/responsive-web-design/',
+                    level: 'Beginner'
+                },
+                {
+                    title: 'DevOps with Docker & Kubernetes',
+                    description: 'Get hands-on experience with containerization and orchestration tools.',
+                    platform: 'Udemy',
+                    link: 'https://www.udemy.com/course/docker-and-kubernetes-the-complete-guide/',
+                    level: 'Intermediate'
+                },
+                {
+                    title: 'Data Science Professional Certificate',
+                    description: 'Comprehensive data science training including Python and machine learning.',
+                    platform: 'edX',
+                    link: 'https://www.edx.org/professional-certificate/ibm-data-science',
+                    level: 'Intermediate'
+                },
+                {
+                    title: 'AWS Certified Solutions Architect',
+                    description: 'Prepare for AWS certification with cloud architecture fundamentals.',
+                    platform: 'AWS Training',
+                    link: 'https://aws.amazon.com/certification/certified-solutions-architect-associate/',
+                    level: 'Advanced'
+                },
+                {
+                    title: 'Introduction to Cybersecurity',
+                    description: 'Learn fundamentals of cybersecurity and how to protect digital assets.',
+                    platform: 'Cisco Networking Academy',
+                    link: 'https://www.netacad.com/courses/cybersecurity/intro-cybersecurity',
+                    level: 'Beginner'
+                },
+                {
+                    title: 'Full-Stack Web Development',
+                    description: 'Become a full-stack developer with React, Node.js, and databases.',
+                    platform: 'Coursera',
+                    link: 'https://www.coursera.org/specializations/full-stack-react',
+                    level: 'Intermediate'
+                }
+            ];
+
+            courseContainer.innerHTML = '';
+            courses.forEach(course => {
+                const card = document.createElement('div');
+                card.className = 'course-card';
+                card.innerHTML = `
+                    <h3>${course.title}</h3>
+                    <p><em>${course.description}</em></p>
+                    <p><strong>Platform:</strong> ${course.platform}</p>
+                    <p><strong>Level:</strong> ${course.level}</p>
+                    <a href="${course.link}" target="_blank" rel="noopener noreferrer">🔗 Enroll Now</a>
+                `;
+                courseContainer.appendChild(card);
+            });
+        }
+        
+
+       function renderJobInsights() {
+    const jobInsightsData = {
+        'Data Scientist': {
+            avgSalary: '$100K - $130K',
+            topCompanies: ['Google', 'IBM', 'Amazon', 'LinkedIn'],
+            jobGrowth: 'Very High',
+            inDemandSkills: ['Python', 'Machine Learning', 'Data Visualization', 'SQL']
+        },
+        'AI Engineer': {
+            avgSalary: '$110K - $140K',
+            topCompanies: ['OpenAI', 'Meta', 'Tesla', 'Apple'],
+            jobGrowth: 'High',
+            inDemandSkills: ['Deep Learning', 'NLP', 'TensorFlow', 'PyTorch']
+        },
+        'Web Developer': {
+            avgSalary: '$70K - $100K',
+            topCompanies: ['Spotify', 'Netflix', 'Adobe', 'Airbnb'],
+            jobGrowth: 'Moderate',
+            inDemandSkills: ['JavaScript', 'React', 'Node.js', 'HTML/CSS']
+        },
+        'DevOps Engineer': {
+        avgSalary: '$90K - $140K',
+        topCompanies: ['Amazon', 'Microsoft', 'Google', 'Netflix'],
+        jobGrowth: 'High',
+        inDemandSkills: ['Linux', 'Docker', 'Kubernetes', 'CI/CD', 'AWS', 'Terraform']
+        },
+
+        'Cybersecurity Analyst': {
+        avgSalary: '$85K - $120K',
+        topCompanies: ['Cisco', 'Palo Alto Networks', 'IBM', 'FireEye'],
+        jobGrowth: 'Very High',
+        inDemandSkills: ['Network Security', 'Risk Assessment', 'SIEM', 'Python', 'Ethical Hacking']
+        },
+
+        'Cloud Architect': {
+        avgSalary: '$120K - $160K',
+        topCompanies: ['AWS', 'Google Cloud', 'Microsoft Azure', 'IBM'],
+        jobGrowth: 'High',
+        inDemandSkills: ['Cloud Computing', 'AWS/Azure/GCP', 'Infrastructure as Code', 'Networking', 'Security']
+        },
+
+        'Data Analyst': {
+        avgSalary: '$60K - $90K',
+        topCompanies: ['Facebook', 'Google', 'Tableau', 'Salesforce'],
+        jobGrowth: 'High',
+        inDemandSkills: ['SQL', 'Excel', 'Tableau', 'Python', 'Data Cleaning']
+        },
+
+        'Mobile App Developer': {
+        avgSalary: '$70K - $110K',
+        topCompanies: ['Apple', 'Google', 'Facebook', 'Spotify'],
+        jobGrowth: 'High',
+        inDemandSkills: ['Java', 'Kotlin', 'Swift', 'React Native', 'UI/UX Design']
+        }
+
+        // Add more roles if needed
+    };
+
+    const jobInsightsContainer = document.getElementById('job-insights');
+    if (!jobInsightsContainer) return;
+
+    jobInsightsContainer.innerHTML = '<h2>📊 Job Insights</h2>';
+    
+    for (const role in jobInsightsData) {
+        const insight = jobInsightsData[role];
+        const div = document.createElement('div');
+        div.className = 'job-card';
+        div.innerHTML = `
+            <h3>${role}</h3>
+            <p><strong>Average Salary:</strong> ${insight.avgSalary}</p>
+            <p><strong>Top Companies:</strong> ${insight.topCompanies.join(', ')}</p>
+            <p><strong>Job Growth:</strong> ${insight.jobGrowth}</p>
+            <p><strong>In-Demand Skills:</strong> ${insight.inDemandSkills.join(', ')}</p>
+        `;
+        jobInsightsContainer.appendChild(div);
+    }
+}
+
+
+        const roadmaps = {
+    'Data Scientist': {
+        beginner: ['Learn Python basics', 'Intro to Statistics', 'Excel'],
+        intermediate: ['Data Visualization (Tableau, Power BI)', 'SQL for Data Analysis', 'Machine Learning algorithms'],
+        advanced: ['Deep Learning', 'Model Deployment', 'Cloud tools (AWS/GCP)', 'Big Data tools (Spark)']
+    },
+    'Web Developer': {
+        beginner: ['HTML & CSS', 'JavaScript Basics', 'Responsive Design'],
+        intermediate: ['React or Vue', 'Git & GitHub', 'Node.js & Express', 'MongoDB/MySQL'],
+        advanced: ['Full-stack Projects', 'Testing & Debugging', 'CI/CD', 'Web Security', 'API Integration']
+    },
+    'AI Engineer': {
+        beginner: ['Python', 'Math for ML', 'Intro to AI'],
+        intermediate: ['Neural Networks', 'TensorFlow / PyTorch', 'Data Preprocessing'],
+        advanced: ['Computer Vision', 'NLP', 'Model Optimization', 'MLOps']
+    },
+    'DevOps Engineer': {
+        beginner: ['Linux Basics', 'Git & Version Control', 'Shell Scripting'],
+        intermediate: ['Docker', 'CI/CD Concepts', 'Monitoring Tools'],
+        advanced: ['Kubernetes', 'Terraform', 'AWS / Azure DevOps', 'Infrastructure as Code']
+    },
+    'Cybersecurity Analyst': {
+        beginner: ['Networking Basics', 'Python', 'Security Principles'],
+        intermediate: ['Firewalls', 'SIEM Tools', 'Incident Response'],
+        advanced: ['Ethical Hacking', 'Cloud Security', 'Penetration Testing']
+    },
+    'Cloud Architect': {
+        beginner: ['Cloud Basics', 'Networking Fundamentals', 'Linux'],
+        intermediate: ['AWS / Azure / GCP Services', 'Security in Cloud', 'DevOps Integration'],
+        advanced: ['Serverless Architecture', 'Design Patterns for Cloud', 'Disaster Recovery']
+    },
+    'Data Analyst': {
+        beginner: ['Excel', 'SQL Basics', 'Python for Data'],
+        intermediate: ['Tableau or Power BI', 'Data Cleaning', 'Statistical Analysis'],
+        advanced: ['Predictive Analytics', 'Storytelling with Data', 'Big Data tools']
+    },
+    'Mobile App Developer': {
+        beginner: ['Java/Kotlin (Android)', 'Flutter/Dart', 'UI Design'],
+        intermediate: ['Firebase', 'APIs Integration', 'State Management'],
+        advanced: ['Animations & Performance', 'Deploy to Store', 'Advanced Architecture (MVVM)']
+    }
+};
+
+// 2. Setup the dropdown toggle function — PLACE THIS HERE 👇
+function setupRoadmapDropdown() {
+    const roadmapHeader = document.getElementById('roadmapHeader');
+    const roadmapDropdown = document.getElementById('roadmapDropdown');
+
+    if (!roadmapHeader || !roadmapDropdown) return;
+
+    roadmapHeader.addEventListener('click', () => {
+        roadmapDropdown.classList.toggle('show');
+    });
+}
+
+// 3. Listen to dropdown role select changes — KEEP THIS AS IS
+document.getElementById('roadmapRoleSelect').addEventListener('change', function () {
+    const role = this.value;
+    const roadmapDiv = document.getElementById('roadmapContent');
+    roadmapDiv.innerHTML = '';
+
+    if (!role || !roadmaps[role]) {
+        roadmapDiv.innerHTML = '<p>Please select a valid role to view the roadmap.</p>';
+        return;
+    }
+
+    const stages = roadmaps[role];
+    for (let level in stages) {
+        const section = document.createElement('div');
+        section.className = 'roadmap-stage';
+        section.innerHTML = `<h3>${level.charAt(0).toUpperCase() + level.slice(1)} Level</h3>`;
+
+        const ul = document.createElement('ul');
+        stages[level].forEach(step => {
+            const li = document.createElement('li');
+            li.textContent = step;
+            ul.appendChild(li);
+        });
+
+        section.appendChild(ul);
+        roadmapDiv.appendChild(section);
+    }
+});
+
+// 4. Ensure this is called in your window.onload or script init
+window.onload = function () {
+    showSection('overview');
+    loadSkillGap();
+    renderCourses();
+    renderJobInsights(); // your existing function
+    setupRoadmapDropdown(); // ✅ CALL THE DROPDOWN TOGGLE SETUP HERE
+};
+    </script>
+
+</head>
+<body>
+    <div class="container">
+        <aside class="sidebar">
+            <ul class="sidebar-nav">
+                <li><a href="#" onclick="showSection('overview')">Overview</a></li>
+                <li><a href="#" onclick="showSection('curriculum')">Curriculum Analysis</a></li>
+                <li><a href="#" onclick="showSection('skillgap')">Skill Gap</a></li>
+                <li><a href="#" onclick="showSection('courses')">Courses</a></li>
+                <li><a href="#" onclick="showSection('job-insights')">Job Insights</a></li>
+                <li><a href="#" onclick="showSection('roadmap')">Roadmap</a></li>
+                <li><a href="{{ url_for('logout') }}">Logout</a></li>
+
+            </ul>
+        </aside>
+        <main class="main-content">
+
+            <!-- Overview Section -->
+            <div id="overview" class="section">
+  <h1>Welcome, {{ email }}!</h1>
+  <p>This is your personalized CareerCoach dashboard.</p>
+
+  <div class="dashboard-cards">
+    <div class="card">
+      <h2>Quick Stats</h2>
+      <ul>
+        <li>Skill Level: <strong>Intermediate</strong></li>
+        <li>Course Progress: <strong>45%</strong></li>
+        <li>Job Matches: <strong>12</strong></li>
+      </ul>
+    </div>
+
+    <div class="card">
+      <h2>Personalized Tips</h2>
+      <ul>
+        <li>Practice coding daily for 30 minutes.</li>
+        <li>Update your LinkedIn profile this week.</li>
+        <li>Attend webinars on data science.</li>
+      </ul>
+    </div>
+
+    <div class="card">
+      <h2>Recent Activity</h2>
+      {% if first_visit %}
+        <p>Welcome! It looks like this is your first time here. Start by setting your career goals and exploring available courses.</p>
+      {% else %}
+        <ul>
+          <li>Completed: Python Basics Course</li>
+          <li>Skill Assessment: Passed Data Structures Test</li>
+          <li>Applied: Software Developer role at XYZ Corp</li>
+        </ul>
+      {% endif %}
+    </div>
+  </div>
+</div>
+
+<style>
+  /* same styles as before */
+  #overview {
+    max-width: 900px;
+    margin: 2rem auto;
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+  }
+  #overview h1 {
+    font-size: 2.5rem;
+    margin-bottom: 0.2rem;
+    color: #2c3e50;
+  }
+  #overview p {
+    font-size: 1.1rem;
+    margin-bottom: 1.5rem;
+    color: #34495e;
+  }
+  .dashboard-cards {
+    display: flex;
+    gap: 1.5rem;
+    flex-wrap: wrap;
+  }
+  .card {
+    background: #f8f9fa;
+    box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+    border-radius: 10px;
+    padding: 1.5rem;
+    flex: 1 1 280px;
+  }
+  .card h2 {
+    margin-bottom: 1rem;
+    color: #2980b9;
+  }
+  .card ul {
+    list-style: disc inside;
+    color: #2c3e50;
+    line-height: 1.4;
+  }
+</style>
+
+
+
+            <!-- Curriculum Analysis Section -->
+<!-- Curriculum Analysis Section -->
+<div class="section" id="curriculum" style="display: none;">
+    <form id="curriculumForm"> 
+
+        <label>Upload your Curriculum (PDF/DOCX/TXT):</label>
+        <input type="file" id="fileInput" name="file"><br><br>
+
+        <label>Or Paste Curriculum Text:</label><br>
+        <textarea id="manualInput" name="manual_input" rows="6" cols="50"></textarea><br><br>
+
+        <button type="submit">Analyze Curriculum</button>
+    </form>
+
+    <hr>
+
+    <h3>Covered Topics:</h3>
+    <div id="coveredTopics" class="topics-list"></div>
+
+    <h3>Not Covered Topics:</h3>
+    <div id="notCoveredTopics" class="topics-list"></div>
+</div>
+
+            <!-- Skill Gap Section -->
+            <div id="skillgap" class="section" style="display:none;">
+    <h1>Skill Gap Analysis</h1>
+    <p>Select an industry role to see missing skills based on your current profile.</p>
+    <div id="skillgap-details"></div> <!-- dropdown and results will be added here -->
+</div>
+
+
+            <!-- Courses Section -->
+            <div id="courses" class="section" style="display:none;">
+                <h1>Recommended Courses</h1>
+                <div id="courses-list" class="courses-container"></div>
+            </div>
+
+            <!-- Job Insights Section -->
+
+<div id="job-insights" class="section" style="display: none;">
+    <h2>📊 Job Insights</h2>
+    <div id="jobRoleSelectContainer">
+        <label for="jobRoleSelect">Choose a Role:</label>
+        <select id="jobRoleSelect">
+            <option value="">-- Select Role --</option>
+            <option value="Data Scientist">Data Scientist</option>
+            <option value="AI Engineer">AI Engineer</option>
+            <option value="Web Developer">Web Developer</option>
+            <option value="DevOps Engineer">DevOps Engineer</option>
+            <option value="Cybersecurity Analyst">Cybersecurity Analyst</option>
+            <option value="Cloud Architect">Cloud Architect</option>
+            <option value="Data Analyst">Data Analyst</option>
+            <option value="Mobile App Developer">Mobile App Developer</option>
+        </select>
+    </div>
+    <div id="jobInsightsResult" style="margin-top: 20px;"></div>
+</div>
+
+
+            
+            <!-- Roadmap Section -->
+<div id="roadmap" class="section" style="display:none;">
+    <h1>Career Roadmap</h1>
+    <p>Select your target role to view a tailored learning path:</p>
+    <select id="roadmapRoleSelect">
+    <option value="">-- Select Role --</option>
+    <option value="Data Scientist">Data Scientist</option>
+    <option value="Web Developer">Web Developer</option>
+    <option value="AI Engineer">AI Engineer</option>
+    <option value="DevOps Engineer">DevOps Engineer</option>
+    <option value="Cybersecurity Analyst">Cybersecurity Analyst</option>
+    <option value="Cloud Architect">Cloud Architect</option>
+    <option value="Data Analyst">Data Analyst</option>
+    <option value="Mobile App Developer">Mobile App Developer</option>
+</select>
+
+<div id="roadmapDetails"></div>
+
+    <div id="roadmapContent" style="margin-top: 20px;"></div>
+    <script>
+    document.getElementById('roadmapRoleSelect').addEventListener('change', function () {
+        const role = this.value;
+        const roadmapDiv = document.getElementById('roadmapContent');
+        roadmapDiv.innerHTML = '';
+
+        if (!role || !roadmaps[role]) {
+            roadmapDiv.innerHTML = '<p>Please select a valid role to view its roadmap.</p>';
+            return;
+        }
+
+        const roadmap = roadmaps[role];
+
+        Object.keys(roadmap).forEach(level => {
+            const section = document.createElement('div');
+            section.className = 'roadmap-section';
+            section.innerHTML = `<h3>${level.charAt(0).toUpperCase() + level.slice(1)}:</h3>`;
+
+            const ul = document.createElement('ul');
+            roadmap[level].forEach(step => {
+                const li = document.createElement('li');
+                li.textContent = step;
+                ul.appendChild(li);
+            });
+
+            section.appendChild(ul);
+            roadmapDiv.appendChild(section);
+        });
+    });
+</script>
+
+
+</div>
+
+        </main>
+    </div>
+</body>
+</html>

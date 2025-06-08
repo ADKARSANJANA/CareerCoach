@@ -1,0 +1,270 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+ <!-- Test this -->
+
+  <title>CareerCoach | Your Personalized Career Guide</title>
+<link rel="stylesheet" href="static/css/style.css">
+
+
+  <style>
+    /* Basic Reset and Fonts */
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    }
+
+    body {
+      background: #f4f8fb;
+      color: #222;
+      line-height: 1.6;
+    }
+
+    a {
+      text-decoration: none;
+      color: inherit;
+    }
+
+    .container {
+      width: 90%;
+      max-width: 1200px;
+      margin: 0 auto;
+    }
+
+    /* Header */
+    header {
+      background: linear-gradient(90deg, #3056d3, #67b8f3);
+      padding: 20px 0;
+      position: sticky;
+      top: 0;
+      z-index: 100;
+      box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+    }
+
+    .nav {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    .logo {
+      font-size: 1.8rem;
+      font-weight: bold;
+      color: #fff;
+    }
+
+    .nav-links a {
+      margin-left: 25px;
+      font-weight: 600;
+      color: #e0f7ff;
+      transition: color 0.3s ease;
+    }
+
+    .nav-links a:hover {
+      color: #fff;
+    }
+
+    /* Hero */
+    .hero {
+      background: linear-gradient(135deg, #3056d3, #67b8f3);
+      color: #fff;
+      text-align: center;
+      padding: 100px 20px;
+    }
+
+    .hero h1 {
+      font-size: 3rem;
+      margin-bottom: 20px;
+    }
+
+    .hero p {
+      font-size: 1.2rem;
+      margin-bottom: 30px;
+    }
+
+    .btn-primary {
+      background: #fff;
+      color: #3056d3;
+      padding: 12px 30px;
+      font-weight: bold;
+      border-radius: 50px;
+      transition: 0.3s;
+      border: none;
+      cursor: pointer;
+    }
+
+    .btn-primary:hover {
+      background: #e6e6e6;
+    }
+
+    /* Features */
+    .features {
+      padding: 60px 0;
+      background: #fff;
+      text-align: center;
+    }
+
+    .features h2 {
+      font-size: 2.5rem;
+      margin-bottom: 30px;
+      color: #3056d3;
+    }
+
+    .feature-grid {
+      display: flex;
+      flex-wrap: wrap;
+      justify-content: center;
+      gap: 25px;
+    }
+
+    .card {
+      background: #eef4ff;
+      padding: 25px;
+      border-radius: 15px;
+      width: 300px;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+      transition: transform 0.3s ease;
+    }
+
+    .card:hover {
+      transform: translateY(-8px);
+    }
+
+    .card h4 {
+      color: #3d52aa;
+      margin-bottom: 10px;
+    }
+
+    /* About */
+    .about {
+      padding: 60px 0;
+      background: #f4f8fb;
+      text-align: center;
+    }
+
+    .about h2 {
+      color: #3056d3;
+      margin-bottom: 20px;
+    }
+
+    .about p {
+      max-width: 800px;
+      margin: 0 auto;
+      font-size: 1.1rem;
+      color: #444;
+    }
+
+    /* How It Works */
+    .how-it-works {
+      background: #fff;
+      padding: 60px 0;
+      text-align: center;
+    }
+
+    .how-it-works h2 {
+      color: #3056d3;
+      margin-bottom: 30px;
+    }
+
+    .step {
+      margin: 20px 0;
+      font-size: 1.1rem;
+    }
+
+    /* Footer */
+    footer {
+      background: #2a2f4f;
+      color: #fff;
+      padding: 30px 0;
+      text-align: center;
+    }
+
+    .footer-links a {
+      color: #ccc;
+      margin: 0 10px;
+    }
+
+    .footer-links a:hover {
+      color: #fff;
+    }
+  </style>
+</head>
+<body>
+
+  <header>
+    <div class="container nav">
+      <div class="logo">CareerCoach</div>
+      <div class="nav-links">
+        <a href="#features">Features</a>
+        <a href="#about">About</a>
+        <a href="#how">How It Works</a>
+        <a href="/auth">Login</a>
+      </div>
+    </div>
+  </header>
+
+  <section class="hero">
+    <h1>Shape Your Future with CareerCoach</h1>
+    <p>Personalized insights, skill mapping, and global job trends – all in one place.</p>
+    <a href="/auth"><button class="btn-primary">Get Started</button></a>
+  </section>
+
+  <section class="features" id="features">
+    <div class="container">
+      <h2>Core Features</h2>
+      <div class="feature-grid">
+        <div class="card">
+          <h4>Curriculum Analysis</h4>
+          <p>Understand your current academic strengths and gaps.</p>
+        </div>
+        <div class="card">
+          <h4>Skill Gap Detection</h4>
+          <p>Discover skills you need to match your dream role.</p>
+        </div>
+        <div class="card">
+          <h4>Job Market Insights</h4>
+          <p>Explore demand across locations and industries.</p>
+        </div>
+        <div class="card">
+          <h4>Smart Recommendations</h4>
+          <p>Courses, certifications, and resume tips curated for you.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section class="about" id="about">
+    <div class="container">
+      <h2>About CareerCoach</h2>
+      <p>
+        CareerCoach is your intelligent partner for career planning. Using AI and Machine Learning, we analyze your academic background, identify skill gaps, and help you reach your career goals with accurate recommendations and market insights.
+      </p>
+    </div>
+  </section>
+
+  <section class="how-it-works" id="how">
+    <div class="container">
+      <h2>How It Works</h2>
+      <div class="step">📄 Upload your Curriculum or Resume</div>
+      <div class="step">🧠 AI analyzes and detects skill gaps</div>
+      <div class="step">📍 Get location-based job insights</div>
+      <div class="step">📚 Receive personalized upskilling plans</div>
+      <div class="step">🚀 Track your growth via dashboard</div>
+    </div>
+  </section>
+
+  <footer>
+    <div class="footer-links">
+      <a href="#">Privacy Policy</a> |
+      <a href="#">Terms of Service</a> |
+      <a href="#">Contact</a>
+    </div>
+    <p>© 2025 CareerCoach. All rights reserved.</p>
+  </footer>
+
+</body>
+</html>

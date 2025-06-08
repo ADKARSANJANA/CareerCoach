@@ -1,0 +1,73 @@
+<!-- templates/auth.html -->
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>CareerCoach - Login / Register</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}" />
+</head>
+<body class="auth-page">
+  <div class="full-wrapper">
+    <a href="/" class="back-btn">←</a>
+
+    <div class="auth-container">
+      <div class="auth-box">
+        <div class="toggle-btns">
+          <button id="login-toggle" class="toggle-btn active">Login</button>
+          <button id="register-toggle" class="toggle-btn">Register</button>
+        </div>
+
+        <form id="login-form" class="auth-form active" action="{{ url_for('login') }}" method="POST">
+          <h2>Welcome Back!</h2>
+          <label for="login-email">Email</label>
+          <input type="email" id="login-email" name="email" placeholder="you@example.com" required />
+
+          <label for="login-password">Password</label>
+          <input type="password" id="login-password" name="password" placeholder="Enter your password" required />
+
+          <button type="submit" class="btn-primary">Sign In</button>
+        </form>
+
+        <form id="register-form" class="auth-form" action="{{ url_for('register') }}" method="POST">
+          <h2>Create Account</h2>
+          <label for="register-name">Full Name</label>
+          <input type="text" id="register-name" name="name" placeholder="Your full name" required />
+
+          <label for="register-email">Email</label>
+          <input type="email" id="register-email" name="email" placeholder="you@example.com" required />
+
+          <label for="register-password">Password</label>
+          <input type="password" id="register-password" name="password" placeholder="Create a password" required />
+
+          <label for="register-confirm-password">Confirm Password</label>
+          <input type="password" id="register-confirm-password" name="confirm_password" placeholder="Confirm your password" required />
+
+          <button type="submit" class="btn-primary">Sign Up</button>
+        </form>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    const loginToggle = document.getElementById('login-toggle');
+    const registerToggle = document.getElementById('register-toggle');
+    const loginForm = document.getElementById('login-form');
+    const registerForm = document.getElementById('register-form');
+
+    loginToggle.addEventListener('click', () => {
+      loginToggle.classList.add('active');
+      registerToggle.classList.remove('active');
+      loginForm.classList.add('active');
+      registerForm.classList.remove('active');
+    });
+
+    registerToggle.addEventListener('click', () => {
+      registerToggle.classList.add('active');
+      loginToggle.classList.remove('active');
+      registerForm.classList.add('active');
+      loginForm.classList.remove('active');
+    });
+  </script>
+</body>
+</html>
